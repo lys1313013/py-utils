@@ -1,8 +1,10 @@
 import psycopg2
-from psycopg2 import sql
-import os
 from datetime import datetime
+import os
 
+from langchain_core.prompts import ChatPromptTemplate
+
+from langchain_openai import ChatOpenAI
 
 def connect_postgresql(host, port, database, user, password):
     """连接PostgreSQL数据库"""
@@ -74,6 +76,49 @@ def execute_schema_query(conn):
         return None
 
 
+def initialize_llm():
+    """初始化大语言模型"""
+    return ChatOpenAI(
+        api_key=os.getenv("LONGCAT_API_KEY"),
+        base_url="https://api.longcat.chat/openai",
+        model="LongCat-Flash-Chat",
+    )
+
+def create_prompt_template():
+    """创建LLM提示词模板"""
+    return ChatPromptTemplate.from_messages([
+        ("system", """
+        你是一个高级研发工程师，我会给你一个md格式的数据库表说明，你需要补全里面的"表名"和"字段名称"字段。
+    注意只需要补全表名和字段名称！！！，并返回完整的结果
+
+    返回结果示例：
+
+    # 用户第三方账号集成表 account_integrates
+
+    | 字段标识 | 字段名称 | 类型（长度） | 非空 |
+    | :------- | :------- | :----------- | :--- |
+    | id | 记录唯一标识	| varchar(38) | 是 |
+    | account_id | 账户标识	 | varchar(38) | 是 |
+        """),
+        ("user", "{input}")
+    ])
+
+
+def invoke_llm_chain(table_content):
+    """调用LLM链处理表内容"""
+    llm = initialize_llm()
+    prompt = create_prompt_template()
+    chain = prompt | llm
+    
+    result = chain.invoke({"input": table_content})
+    
+    print("原始数据")
+    print(table_content)
+    print("AI输出结果")
+    print(result.content)
+    
+    return result.content
+
 def generate_markdown_document(results, output_file="database_schema.md"):
     """生成Markdown文档"""
 
@@ -110,8 +155,9 @@ def generate_markdown_document(results, output_file="database_schema.md"):
 
             table_content += f"| {column['字段标识']} | {column_name} | {type_length} | {column['非空']} |\n"
 
-        table_content += "\n"
-        markdown_content += table_content
+        # 调用LLM解释表名和字段名称
+        enhanced_content = invoke_llm_chain(table_content)
+        markdown_content += enhanced_content + "\n"
 
     # 写入文件
     try:
