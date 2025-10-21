@@ -97,8 +97,8 @@ def generate_markdown_document(results, output_file="database_schema.md"):
 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 """
-    table_content = ""
     for table_name, columns in tables_data.items():
+        table_content = ""
         table_content += f"# {table_name}\n\n"
         table_content += "| 字段标识 | 字段名称 | 类型（长度） | 非空 |\n"
         table_content += "| :------- | :------- | :----------- | :--- |\n"
