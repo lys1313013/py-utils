@@ -3,6 +3,7 @@ from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
+from docx.shared import Pt
 import os
 
 
@@ -126,6 +127,9 @@ class MarkdownToDocxConverter:
                     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     for run in paragraph.runs:
                         run.font.bold = True
+                        run.font.name = '宋体'
+                        run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                        run.font.size = Pt(12)  # 小四号字体大小 (12磅)
             except:
                 pass
 
@@ -136,6 +140,15 @@ class MarkdownToDocxConverter:
                 row_cells = table.add_row().cells
                 for j, cell_data in enumerate(row_data):
                     row_cells[j].text = cell_data.strip()
+                    # 设置表格内容样式为宋体小四
+                    try:
+                        for paragraph in row_cells[j].paragraphs:
+                            for run in paragraph.runs:
+                                run.font.name = '宋体'
+                                run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+                                run.font.size = Pt(12)  # 小四号字体大小 (12磅)
+                    except:
+                        pass
 
     def parse_table_row(self, row_line):
         """解析表格行"""
